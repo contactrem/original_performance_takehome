@@ -121,6 +121,14 @@ class Machine:
         else:
             self.trace = None
 
+        self.ENGINE_FNS = {
+            "alu": self.alu,
+            "valu": self.valu,
+            "load": self.load,
+            "store": self.store,
+            "flow": self.flow,
+        }
+
     def rewrite_instr(self, instr):
         """
         Rewrite an instruction to use scratch addresses instead of names
@@ -354,13 +362,6 @@ class Machine:
         """
         Execute all the slots in each engine for a single instruction bundle
         """
-        ENGINE_FNS = {
-            "alu": self.alu,
-            "valu": self.valu,
-            "load": self.load,
-            "store": self.store,
-            "flow": self.flow,
-        }
         self.scratch_write = {}
         self.mem_write = {}
         for name, slots in instr.items():
@@ -385,7 +386,7 @@ class Machine:
             for i, slot in enumerate(slots):
                 if self.trace is not None:
                     self.trace_slot(core, slot, name, i)
-                ENGINE_FNS[name](core, *slot)
+                self.ENGINE_FNS[name](core, *slot)
         for addr, val in self.scratch_write.items():
             core.scratch[addr] = val
         for addr, val in self.mem_write.items():
