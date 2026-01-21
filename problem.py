@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Literal
 import random
+import os
 
 Engine = Literal["alu", "load", "store", "flow"]
 Instruction = dict[Engine, list[tuple]]
@@ -414,7 +415,14 @@ class Tree:
     @staticmethod
     def generate(height: int):
         n_nodes = 2 ** (height + 1) - 1
-        values = [random.randint(0, 2**30 - 1) for _ in range(n_nodes)]
+        # It's faster to generate a big batch of random bytes at once
+        # than to call randint repeatedly.
+        rand_bytes = os.urandom(n_nodes * 4)
+        # We then unpack them into 30-bit numbers.
+        values = [
+            int.from_bytes(rand_bytes[i : i + 4], "little") >> 2
+            for i in range(0, n_nodes * 4, 4)
+        ]
         return Tree(height, values)
 
 
@@ -432,7 +440,11 @@ class Input:
     @staticmethod
     def generate(forest: Tree, batch_size: int, rounds: int):
         indices = [0 for _ in range(batch_size)]
-        values = [random.randint(0, 2**30 - 1) for _ in range(batch_size)]
+        rand_bytes = os.urandom(batch_size * 4)
+        values = [
+            int.from_bytes(rand_bytes[i : i + 4], "little") >> 2
+            for i in range(0, batch_size * 4, 4)
+        ]
         return Input(indices, values, rounds)
 
 
