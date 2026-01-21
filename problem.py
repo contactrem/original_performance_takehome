@@ -116,6 +116,7 @@ class Machine:
         self.cycle = 0
         self.enable_pause = True
         self.enable_debug = True
+        self.running_cores_count = sum(1 for c in self.cores if c.state == CoreState.RUNNING)
         if trace:
             self.setup_trace()
         else:
@@ -199,13 +200,15 @@ class Machine:
         for core in self.cores:
             if core.state == CoreState.PAUSED:
                 core.state = CoreState.RUNNING
-        while any(c.state == CoreState.RUNNING for c in self.cores):
+                self.running_cores_count += 1
+        while self.running_cores_count > 0:
             has_non_debug = False
             for core in self.cores:
                 if core.state != CoreState.RUNNING:
                     continue
                 if core.pc >= len(self.program):
                     core.state = CoreState.STOPPED
+                    self.running_cores_count -= 1
                     continue
                 instr = self.program[core.pc]
                 if self.prints:
@@ -315,9 +318,11 @@ class Machine:
                     )
             case ("halt",):
                 core.state = CoreState.STOPPED
+                self.running_cores_count -= 1
             case ("pause",):
                 if self.enable_pause:
                     core.state = CoreState.PAUSED
+                    self.running_cores_count -= 1
             case ("trace_write", val):
                 core.trace_buf.append(core.scratch[val])
             case ("cond_jump", cond, addr):
